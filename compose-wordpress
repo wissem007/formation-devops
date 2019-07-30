@@ -1,0 +1,69 @@
+version: "2"
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    network_mode: bridge
+  1_test_mysql:
+    container_name: 1test_mysql
+    image: mysql:5.7
+    #restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpw
+      MYSQL_DATABASE: base_de_donnee_test
+      #MYSQL_USER: wissem
+      #MYSQL_PASSWORD: wissempw
+      #MYSQL_ALLOW_EMPTY_PASSWORD
+      #MYSQL_RANDOM_PASSWORD
+      #MYSQL_ONETIME_PASSWORD
+    volumes:
+      - ./db_data:/var/lib/mysql
+    network_mode: bridge
+  1_test_phpmyadmin:
+    container_name: 1test_phpmyadmin
+    image: phpmyadmin/phpmyadmin
+    #restart: always
+    links:
+      - 1_test_mysql:mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpw
+      PMA_HOST: mysql
+      VIRTUAL_HOST: phpmyadmin.local
+    #ports:
+      #- 81:80
+    network_mode: bridge
+  1_test_wordpres:
+    container_name: 1_test_wordpres
+    image: wordpress
+    links:
+      - 1_test_mysql:mysql
+    environment:
+      WORDPRESS_DB_PASSWORD: rootpw
+      VIRTUAL_HOST: wordpress.local
+    #ports:
+      #- 80:80
+    volumes:
+      - ./wp_data:/var/www/html
+    network_mode: bridge
+  mysql_backup:
+    container_name: mysql_backup
+    image: databack/mysql-backup
+    depends_on:
+      - 1_test_mysql
+    links:
+      - 1_test_mysql:mysql
+    #restart: always
+    volumes:
+      - ./db_backup:/db
+      #il faut mettre le dossier db_backup dans la host accessible lecture et ecriture  chmod -R 777
+    environment:
+      - DB_DUMP_TARGET=/db
+      - DB_USER=root
+      - DB_PASS=rootpw
+      - DB_DUMP_FREQ=30
+      - DB_DUMP_BEGIN=+0
+      - DB_SERVER=mysql
+    network_mode: bridge
